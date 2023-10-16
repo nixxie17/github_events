@@ -1,10 +1,12 @@
 package com.nikola.githubevents.domain.model
 
-data class GitHubEvent(
-    val id: String,
-    val type: String,
-    val actor: Actor,
-    val repo: Repository?,
-    val payload: EventPayload?,
-    val createdAt: String
-)
+sealed class GitHubEvent{
+    abstract val id: String?
+    abstract val type: String?
+    abstract val actor: Actor?
+    abstract val repo: Repository?
+    abstract val createdAt: String?
+}
+
+
+

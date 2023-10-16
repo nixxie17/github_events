@@ -1,8 +1,15 @@
 package com.nikola.githubevents.di
 
+import com.nikola.githubevents.BASE_URL
+import com.nikola.githubevents.CREATE_EVENT
+import com.nikola.githubevents.DELETE_EVENT
+import com.nikola.githubevents.OTHER_EVENT
+import com.nikola.githubevents.PULL_REQUEST_EVENT
+import com.nikola.githubevents.PUSH_EVENT
 import com.nikola.githubevents.data.dto.CreateEventDto
 import com.nikola.githubevents.data.dto.DeleteEventDto
 import com.nikola.githubevents.data.dto.GitHubEventDto
+import com.nikola.githubevents.data.dto.OtherEventDto
 import com.nikola.githubevents.data.dto.PullRequestEventDto
 import com.nikola.githubevents.data.dto.PushEventDto
 import com.nikola.githubevents.data.repository.GitHubEventsRepositoryImpl
@@ -14,29 +21,31 @@ import com.squareup.moshi.adapters.PolymorphicJsonAdapterFactory
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import org.koin.core.qualifier.named
 import org.koin.dsl.module
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import java.util.concurrent.TimeUnit
 
 private const val TIME_OUT = 30L
+private const val NETWORK_SCOPE = "Network"
 
 val NetworkModule = module {
 
     single { createService(get()) }
 
-    single { createRetrofit(get(), getBaseUrl(), get()) }
+    single { MoshiConverterFactory.create() }
+
+    single { createRetrofit(get(), getBaseUrl(), get(named(NETWORK_SCOPE))) }
 
     single { createOkHttpClient() }
 
-    single { MoshiConverterFactory.create() }
-
-    single { createMoshiParserConfig() }
+    single(named(NETWORK_SCOPE)) { createMoshiParserConfig() }
 
 }
 
 //Should be coming from the BuildConfig object for different application builds
-fun getBaseUrl() = "https://api.github.com/"
+fun getBaseUrl() = BASE_URL
 
 fun createOkHttpClient(): OkHttpClient {
     val httpLoggingInterceptor = HttpLoggingInterceptor()
@@ -50,11 +59,12 @@ fun createOkHttpClient(): OkHttpClient {
 fun createMoshiParserConfig(): Moshi =
     Moshi.Builder()
     .add(
-        PolymorphicJsonAdapterFactory.of(GitHubEventDto::class.java, "payload")
-            .withSubtype(DeleteEventDto::class.java, "DeleteEvent")
-            .withSubtype(CreateEventDto::class.java, "CreateEvent")
-            .withSubtype(PullRequestEventDto::class.java, "PullRequestEvent")
-            .withSubtype(PushEventDto::class.java, "PushEvent")
+        PolymorphicJsonAdapterFactory.of(GitHubEventDto::class.java, "type")
+            .withSubtype(DeleteEventDto::class.java, DELETE_EVENT)
+            .withSubtype(CreateEventDto::class.java, CREATE_EVENT)
+            .withSubtype(PullRequestEventDto::class.java, PULL_REQUEST_EVENT)
+            .withSubtype(PushEventDto::class.java, PUSH_EVENT)
+            .withDefaultValue(OtherEventDto(null, OTHER_EVENT, null, null, null))
 )
 .addLast(KotlinJsonAdapterFactory())
 .build()
